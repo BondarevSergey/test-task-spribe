@@ -1,0 +1,19 @@
+# Ignore artifacts:
+dist
+coverage
+
+# dependencies
+/node_modules
+
+# IDEs and editors
+.idea
+.vscode
+
+.prettierignore
+package-lock.json
+package.json
+index.html
+src/polyfills.ts
+
+e2e/**/*
+scr/assets/**/*
