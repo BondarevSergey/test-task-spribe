@@ -1,0 +1,23 @@
+<div class="game">
+    @if (gameEvents$ | async; as gameEvents) {
+        <div class="game__info">
+            <div class="game__time"><strong>Time left:</strong> {{ gameEvents.seconds }}</div>
+            <div class="game__score"><strong>Score:</strong> {{ gameEvents.score }}</div>
+        </div>
+
+        <div class="game__widget" [style.width.px]="gameWidth" [style.height.px]="gameHeight">
+            <div class="game__player" [style.left.px]="characterX" [style.width.px]="characterWidth"></div>
+
+            @for (ball of gameEvents.balls; track ball) {
+                <div class="game__ball" [style.top.px]="ball.y" [style.left.px]="ball.x"></div>
+            }
+        </div>
+
+        <div class="game__actions">
+            <button class="btn" [disabled]="!gameEvents.seconds" (click)="moveLeft()">Left</button>
+            <button class="btn" [disabled]="!gameEvents.seconds" (click)="moveRight()">Right</button>
+        </div>
+    }
+
+    <app-game-settings (settingsChange)="setSettings($event)"></app-game-settings>
+</div>

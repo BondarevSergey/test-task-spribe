@@ -1,0 +1,47 @@
+.game {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+
+    &__info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 400px;
+        margin-bottom: 20px;
+    }
+
+    &__widget {
+        position: relative;
+        background: #f0f0f0;
+        margin-bottom: 20px;
+        border: 1px solid #000;
+        overflow: hidden;
+    }
+
+    &__player {
+        position: absolute;
+        bottom: 0;
+        width: 80px;
+        height: 20px;
+        background: purple;
+        transition: left 0.02s linear;
+    }
+
+    &__ball {
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #ff0000;
+    }
+
+    &__actions {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+}

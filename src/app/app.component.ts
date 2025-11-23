@@ -1,12 +1,12 @@
-import {ChangeDetectionStrategy, Component} from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { GameComponent } from './features/game/game.component';
 
 @Component({
     selector: 'app-root',
-    standalone: true,
     templateUrl: './app.component.html',
     styleUrl: './app.component.scss',
-    changeDetection: ChangeDetectionStrategy.OnPush
-
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [GameComponent],
+    standalone: true
 })
-export class AppComponent {
-}
+export class AppComponent {}

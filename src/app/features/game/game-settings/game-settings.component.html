@@ -1,0 +1,23 @@
+@if ({changes: formChangeSteam$ | async}) {
+    <form [formGroup]="form" class="settings">
+        <app-form-field class="settings__control" label="Falling Speed (px/s)">
+            <input type="number" appFieldInput formControlName="fallingSpeed">
+            <app-form-field-errors [control]="form.get('fallingSpeed')"/>
+        </app-form-field>
+
+        <app-form-field class="settings__control" label="Falling Frequency (ms)">
+            <input type="number" appFieldInput formControlName="fallingFrequency">
+            <app-form-field-errors [control]="form.get('fallingFrequency')"/>
+        </app-form-field>
+
+        <app-form-field class="settings__control" label="Player Speed (px per key press)">
+            <input type="number" appFieldInput formControlName="playerSpeed">
+            <app-form-field-errors [control]="form.get('playerSpeed')"/>
+        </app-form-field>
+
+        <app-form-field class="settings__control" label="Game Time (s)">
+            <input type="number" appFieldInput formControlName="gameTime">
+            <app-form-field-errors [control]="form.get('gameTime')"/>
+        </app-form-field>
+    </form>
+}
