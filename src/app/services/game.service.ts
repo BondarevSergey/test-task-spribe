@@ -6,6 +6,9 @@ import { SocketService } from './socket.service';
 export class GameService {
     constructor(private readonly socketService: SocketService) {}
 
+    /**
+     * Method that inform server about start of the game
+     */
     public startGame(gameTime: number): Observable<void> {
         return of(void 0).pipe(
             delay(500),
@@ -13,6 +16,9 @@ export class GameService {
         );
     }
 
+    /**
+     * Method that inform server about a player caught an object
+     */
     public updateScore(): Observable<void> {
         return of(void 0).pipe(
             delay(500),

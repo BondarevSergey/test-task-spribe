@@ -15,3 +15,12 @@ export interface Ball {
     x: number;
     y: number;
 }
+
+export interface GameStateObj {
+    timeRemaining: number;
+    caughtObjects: number;
+}
+
+export interface GameStatus {
+    isGameActive: boolean;
+}

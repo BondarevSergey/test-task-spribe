@@ -1,8 +1,8 @@
 <div class="game">
     @if (gameEvents$ | async; as gameEvents) {
         <div class="game__info">
-            <div class="game__time"><strong>Time left:</strong> {{ gameEvents.seconds }}</div>
-            <div class="game__score"><strong>Score:</strong> {{ gameEvents.score }}</div>
+            <div class="game__time"><strong>Time left:</strong> {{ gameEvents.timeRemaining }}</div>
+            <div class="game__score"><strong>Score:</strong> {{ gameEvents.caughtObjects }}</div>
         </div>
 
         <div class="game__widget" [style.width.px]="gameWidth" [style.height.px]="gameHeight">
@@ -14,8 +14,8 @@
         </div>
 
         <div class="game__actions">
-            <button class="btn" [disabled]="!gameEvents.seconds" (click)="moveLeft()">Left</button>
-            <button class="btn" [disabled]="!gameEvents.seconds" (click)="moveRight()">Right</button>
+            <button class="btn" [disabled]="!gameEvents.timeRemaining" (click)="moveLeft()">Left</button>
+            <button class="btn" [disabled]="!gameEvents.timeRemaining" (click)="moveRight()">Right</button>
         </div>
     }
 

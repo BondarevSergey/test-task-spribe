@@ -1,4 +1,4 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { AsyncPipe } from '@angular/common';
 import {
@@ -9,13 +9,13 @@ import {
     interval,
     map,
     Observable,
+    of,
     startWith,
-    Subject,
     switchMap,
-    takeUntil,
-    takeWhile,
     tap
 } from 'rxjs';
+import { GameState } from '../../store/game.state';
+import { GameService } from '../../services/game.service';
 import { GameSettingsComponent } from './game-settings/game-settings.component';
 import { Ball, GameSettings } from '../../models/game.model';
 
@@ -26,7 +26,7 @@ import { Ball, GameSettings } from '../../models/game.model';
     styleUrls: ['./game.component.scss'],
     imports: [ReactiveFormsModule, GameSettingsComponent, AsyncPipe]
 })
-export class GameComponent implements OnDestroy {
+export class GameComponent {
     // ---
     // Visual params of game
     // ---
@@ -39,90 +39,81 @@ export class GameComponent implements OnDestroy {
     /// Game params
     /// ----
     private balls$ = new BehaviorSubject<Ball[]>([]);
-    private score$ = new BehaviorSubject(0);
 
     private settingsMap: Record<keyof GameSettings, BehaviorSubject<number>> = {
-        gameTime: new BehaviorSubject<number>(0),
-        fallingSpeed: new BehaviorSubject<number>(0),
-        fallingFrequency: new BehaviorSubject<number>(0),
-        playerSpeed: new BehaviorSubject<number>(0)
+        gameTime: new BehaviorSubject(0),
+        fallingSpeed: new BehaviorSubject(0),
+        fallingFrequency: new BehaviorSubject(0),
+        playerSpeed: new BehaviorSubject(0)
     };
 
-    private startTrigger$ = new BehaviorSubject<boolean>(false);
-    private stopTrigger$ = new Subject<void>();
+    private timeRemaining$ = new BehaviorSubject(0);
+    private caughtObjects$ = new BehaviorSubject(void 0);
 
     public gameEvents$!: Observable<{
         balls: Ball[];
-        score: number;
-        seconds: number;
+        timeRemaining: number;
+        caughtObjects: number;
     }>;
 
-    constructor() {
+    constructor(
+        private readonly gameService: GameService,
+        private readonly state: GameState
+    ) {
         /**
-         * Timer$ - countdown timer
-         * it starts when a player sets gameTime and restarts when it updated
-         **/
-        const timer$ = this.startTrigger$.pipe(
+         * Stream that gets data from store
+         */
+        const results$ = this.state.gameInfo$;
+
+        /**
+         * Stream that triggers game start on server
+         */
+        const startGameOnServer$ = this.timeRemaining$.pipe(
             filter(Boolean),
-            switchMap(() =>
-                this.settingsMap.gameTime.pipe(
-                    takeUntil(this.stopTrigger$),
-                    switchMap((time) =>
-                        interval(1000).pipe(
-                            map((value) => time - value), // віднімаємо пройдені секунди
-                            takeWhile((x) => x >= 0),
-                            tap((remaining) => {
-                                if (remaining === 0) {
-                                    this.stopGame();
-                                }
-                            })
-                        )
-                    )
-                )
+            switchMap((val) => this.gameService.startGame(val)),
+            startWith(void 0)
+        );
+
+        /**
+         * Stream that increment score on server
+         */
+        const updateScoreOnServer$ = this.caughtObjects$.pipe(
+            switchMap(() => this.gameService.updateScore()),
+            startWith(void 0)
+        );
+
+        /**
+         * This stream is responsible for creation the ball
+         * and related to changes fallingFrequency (how often new a ball appears)
+         * That stream exists until the game status is true
+         **/
+        const spawn$ = this.state.isGameActive$.pipe(
+            switchMap((isActive) =>
+                isActive
+                    ? this.settingsMap.fallingFrequency.pipe(
+                          filter((freq) => freq > 0),
+                          distinctUntilChanged(),
+                          switchMap((freq) => interval(freq).pipe(tap(() => this.createBall())))
+                      )
+                    : of(void 0).pipe(tap(() => this.balls$.next([])))
             )
         );
 
         /**
-         * It is a stream that stops related streams when game over
+         * This stream is responsible for moving the ball
+         * and related to changes fallingSpeed (how fast the balls fall)
+         * That stream exists until the game status is true
          **/
-        const spawn$ = this.startTrigger$.pipe(
-            filter(Boolean),
-            switchMap(() =>
-                this.settingsMap.fallingFrequency.pipe(
-                    takeUntil(this.stopTrigger$),
-                    filter((freq) => freq > 0),
-                    distinctUntilChanged(),
-                    switchMap((freq) =>
-                        interval(freq).pipe(
-                            tap(() => this.createBall()),
-                            takeUntil(this.stopTrigger$)
-                        )
-                    )
-                )
-            ),
-            startWith(void 0)
-        );
-
-        /**
-         * That stream exists until time timer$ is not over
-         * and creates a new ball every fallingFrequency (ms)
-         **/
-        const fall$ = this.startTrigger$.pipe(
-            filter(Boolean),
-            switchMap(() =>
-                this.settingsMap.fallingSpeed.pipe(
-                    takeUntil(this.stopTrigger$),
-                    filter((speed) => speed > 0),
-                    distinctUntilChanged(),
-                    switchMap((speed) =>
-                        interval(16).pipe(
-                            tap(() => this.checkBalls(speed)),
-                            takeUntil(this.stopTrigger$) // миттєво відключаємо
-                        )
-                    )
-                )
-            ),
-            startWith(void 0)
+        const fall$ = this.state.isGameActive$.pipe(
+            switchMap((isActive) =>
+                isActive
+                    ? this.settingsMap.fallingSpeed.pipe(
+                          filter((speed) => speed > 0),
+                          distinctUntilChanged(),
+                          switchMap((speed) => interval(16).pipe(tap(() => this.checkBalls(speed))))
+                      )
+                    : of(void 0)
+            )
         );
 
         /**
@@ -130,37 +121,33 @@ export class GameComponent implements OnDestroy {
          **/
         this.gameEvents$ = combineLatest([
             this.balls$.asObservable(),
-            this.score$.asObservable(),
-            timer$.pipe(startWith(0)),
+            results$,
             spawn$,
-            fall$
+            fall$,
+            startGameOnServer$,
+            updateScoreOnServer$
         ]).pipe(
-            map(([balls, score, seconds]) => ({
+            map(([balls, results]) => ({
                 balls,
-                score,
-                seconds
+                ...results
             }))
         );
-    }
-
-    ngOnDestroy(): void {
-        this.stopGame();
-        this.stopTrigger$.complete();
     }
 
     /**
      * Update settings of the game
      **/
-    protected setSettings(settings: GameSettings) {
+    public setSettings(settings: GameSettings) {
         const { gameTime, ...rest } = settings;
-        for (const key in rest) {
-            this.settingsMap[key as keyof GameSettings].next(settings[key as keyof GameSettings]);
-        }
+
+        Object.entries(rest).forEach(([key, value]) => {
+            this.settingsMap[key as keyof GameSettings].next(value);
+        });
 
         if (gameTime !== this.settingsMap.gameTime.getValue()) {
-            this.stopGame();
+            this.balls$.next([]);
+            this.timeRemaining$.next(gameTime);
             this.settingsMap.gameTime.next(gameTime);
-            this.startTrigger$.next(true);
         }
     }
 
@@ -177,14 +164,6 @@ export class GameComponent implements OnDestroy {
             this.gameWidth - this.characterWidth,
             this.characterX + this.settingsMap.playerSpeed.getValue()
         );
-    }
-
-    /**
-     * Method for stopping the game
-     */
-    private stopGame() {
-        this.stopTrigger$.next();
-        this.balls$.next([]);
     }
 
     /**
@@ -207,7 +186,7 @@ export class GameComponent implements OnDestroy {
 
             if (ball.y >= 350) {
                 if (ball.x > this.characterX - 10 && ball.x < this.characterX + this.characterWidth) {
-                    // this.score++;
+                    this.caughtObjects$.next(void 0);
                 }
                 balls.splice(index, 1);
             }
