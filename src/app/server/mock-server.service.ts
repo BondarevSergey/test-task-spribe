@@ -49,6 +49,5 @@ export class MockServerService {
 
     public updateScore(): void {
         this.caughtObjects$.next(this.caughtObjects$.getValue() + 1);
-        console.log('Server: ', this.caughtObjects$.getValue());
     }
 }

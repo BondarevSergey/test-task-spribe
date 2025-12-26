@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { GameComponent } from './features/game/game.component';
+import { SocketService } from './services/socket.service';
 
 @Component({
     selector: 'app-root',
@@ -9,4 +10,6 @@ import { GameComponent } from './features/game/game.component';
     imports: [GameComponent],
     standalone: true
 })
-export class AppComponent {}
+export class AppComponent {
+    readonly #socketService = inject(SocketService);
+}

@@ -17,7 +17,6 @@ export class GameService {
      * Method that inform server about a player caught an object
      */
     public updateScore(): Observable<void> {
-        console.log('update');
         return of(void 0).pipe(tap(() => this.server.updateScore()));
     }
 }
