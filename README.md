@@ -2,6 +2,8 @@
 
 This project is the test task for Spribe company for Senior Angular Developer position.
 
+![img.png](demo/img.png)
+
 ## Description of the task
 Create a simple mini-game in Angular where the player controls a character (a
 rectangle) that moves left and right to catch falling objects (balls). Points are awarded
