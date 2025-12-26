@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { AsyncPipe } from '@angular/common';
 import {
@@ -11,6 +11,7 @@ import {
     Observable,
     of,
     startWith,
+    Subject,
     switchMap,
     tap
 } from 'rxjs';
@@ -21,12 +22,19 @@ import { Ball, GameSettings } from '../../models/game.model';
 
 @Component({
     selector: 'app-game',
-    standalone: true,
     templateUrl: './game.component.html',
     styleUrls: ['./game.component.scss'],
-    imports: [ReactiveFormsModule, GameSettingsComponent, AsyncPipe]
+    imports: [ReactiveFormsModule, GameSettingsComponent, AsyncPipe],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    standalone: true
 })
 export class GameComponent {
+    public gameEvents$!: Observable<{
+        balls: Ball[];
+        timeRemaining: number;
+        caughtObjects: number;
+    }>;
+
     // ---
     // Visual params of game
     // ---
@@ -38,8 +46,6 @@ export class GameComponent {
     /// ----
     /// Game params
     /// ----
-    private balls$ = new BehaviorSubject<Ball[]>([]);
-
     private settingsMap: Record<keyof GameSettings, BehaviorSubject<number>> = {
         gameTime: new BehaviorSubject(0),
         fallingSpeed: new BehaviorSubject(0),
@@ -47,29 +53,19 @@ export class GameComponent {
         playerSpeed: new BehaviorSubject(0)
     };
 
-    private timeRemaining$ = new BehaviorSubject(0);
-    private caughtObjects$ = new BehaviorSubject(void 0);
+    private balls$ = new BehaviorSubject<Ball[]>([]);
 
-    public gameEvents$!: Observable<{
-        balls: Ball[];
-        timeRemaining: number;
-        caughtObjects: number;
-    }>;
+    private timeRemainingAction$ = new Subject<number>();
+    private caughtObjectsAction$ = new Subject();
 
     constructor(
         private readonly gameService: GameService,
         private readonly state: GameState
     ) {
         /**
-         * Stream that gets data from store
-         */
-        const results$ = this.state.gameInfo$;
-
-        /**
          * Stream that triggers game start on server
          */
-        const startGameOnServer$ = this.timeRemaining$.pipe(
-            filter(Boolean),
+        const startGameOnServer$ = this.timeRemainingAction$.pipe(
             switchMap((val) => this.gameService.startGame(val)),
             startWith(void 0)
         );
@@ -77,7 +73,7 @@ export class GameComponent {
         /**
          * Stream that increment score on server
          */
-        const updateScoreOnServer$ = this.caughtObjects$.pipe(
+        const updateScoreOnServer$ = this.caughtObjectsAction$.pipe(
             switchMap(() => this.gameService.updateScore()),
             startWith(void 0)
         );
@@ -121,7 +117,7 @@ export class GameComponent {
          **/
         this.gameEvents$ = combineLatest([
             this.balls$.asObservable(),
-            results$,
+            this.state.gameInfo$,
             spawn$,
             fall$,
             startGameOnServer$,
@@ -146,7 +142,7 @@ export class GameComponent {
 
         if (gameTime !== this.settingsMap.gameTime.getValue()) {
             this.balls$.next([]);
-            this.timeRemaining$.next(gameTime);
+            this.timeRemainingAction$.next(gameTime);
             this.settingsMap.gameTime.next(gameTime);
         }
     }
@@ -180,18 +176,20 @@ export class GameComponent {
      **/
     private checkBalls(speed: number): void {
         const balls = this.balls$.getValue();
+        const remains: Ball[] = [];
 
         balls.forEach((ball, index) => {
             ball.y += speed;
 
             if (ball.y >= 350) {
                 if (ball.x > this.characterX - 10 && ball.x < this.characterX + this.characterWidth) {
-                    this.caughtObjects$.next(void 0);
+                    this.caughtObjectsAction$.next(void 0);
                 }
-                balls.splice(index, 1);
+            } else {
+                remains.push(ball);
             }
         });
 
-        this.balls$.next(balls);
+        this.balls$.next(remains);
     }
 }

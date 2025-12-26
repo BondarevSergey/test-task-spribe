@@ -1,28 +1,23 @@
 import { Injectable } from '@angular/core';
-import { delay, Observable, of, tap } from 'rxjs';
-import { SocketService } from './socket.service';
+import { Observable, of, tap } from 'rxjs';
+import { MockServerService } from '../server/mock-server.service';
 
 @Injectable({ providedIn: 'root' })
 export class GameService {
-    constructor(private readonly socketService: SocketService) {}
+    constructor(private readonly server: MockServerService) {}
 
     /**
      * Method that inform server about start of the game
      */
     public startGame(gameTime: number): Observable<void> {
-        return of(void 0).pipe(
-            delay(500),
-            tap(() => this.socketService.startGame(gameTime))
-        );
+        return of(void 0).pipe(tap(() => this.server.startGame(gameTime)));
     }
 
     /**
      * Method that inform server about a player caught an object
      */
     public updateScore(): Observable<void> {
-        return of(void 0).pipe(
-            delay(500),
-            tap(() => this.socketService.updateScore())
-        );
+        console.log('update');
+        return of(void 0).pipe(tap(() => this.server.updateScore()));
     }
 }
